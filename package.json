@@ -1,0 +1,56 @@
+{
+    "$schema": "https://json.schemastore.org/tsconfig",
+    "name": "real-json-data",
+    "version": "0.0.1",
+    "description": "A simple json data store.",
+    "author": "wuzhanggui",
+    "license": "MIT",
+    "type": "module",
+    "keywords": [
+        "json"
+    ],
+    "homepage": "https://github.com/wurencaideli/real-json-data",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/wurencaideli/real-json-data"
+    },
+    "bugs": {
+        "url": "https://github.com/wurencaideli/real-json-data/issues"
+    },
+    "jspm": {
+        "main": "dist/real-json-data.cjs.js",
+        "registry": "jspm"
+    },
+    "main": "dist/real-json-data.cjs.js",
+    "module": "dist/real-json-data.esm.js",
+    "types": "dict/real-json-data.d.ts",
+    "exports": {
+        ".": {
+            "types": "./dist/real-json-data.d.ts",
+            "import": "./dist/real-json-data.esm.js",
+            "require": "./dist/real-json-data.cjs.js"
+        }
+    },
+    "files": [
+        "dist",
+        "src"
+    ],
+    "scripts": {
+        "dev": "rollup -c -w",
+        "build": "rollup -c",
+        "test": "node demo.js"
+    },
+    "devDependencies": {
+        "@rollup/plugin-commonjs": "^28.0.6",
+        "@rollup/plugin-node-resolve": "^16.0.1",
+        "@rollup/plugin-terser": "^0.4.4",
+        "@rollup/plugin-typescript": "^12.1.4",
+        "@types/node": "^24.12.2",
+        "rollup": "^3.29.5",
+        "tslib": "^2.8.1",
+        "typescript": "^5.8.3"
+    },
+    "dependencies": {
+        "uuid": "^11.1.0"
+    }
+}
