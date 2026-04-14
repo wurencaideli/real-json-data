@@ -1,0 +1,8 @@
+node_modules
+.github
+.vscode
+demo-data.json
+demo.json
+.prettierrc.json
+.gitignore
+rollup.config.js
