@@ -1,5 +1,5 @@
 /*!
- * real-json-data v0.0.1
+ * real-json-data v0.0.2
  * Copyright 2026 wuzhanggui https://github.com/wurencaideli
  * Licensed under MIT
  */
