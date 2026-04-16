@@ -14,29 +14,48 @@ const instance = new RealJsonData(
         cache: true,
         idKey: 'id__local__',
         afterSetCache(list) {
-            console.log('cache', list);
+            console.log('afterSetCache', list);
+        },
+        afterDataChange(list) {
+            console.log('afterDataChange', list);
         },
     },
 );
 async function start() {
     console.log(instance);
     console.log(await instance.list());
-    await instance.add({
-        id: 123123,
-        content: '456',
-    });
-    await instance.add({
-        id: 123123,
-        content: '4561',
-    });
-    await instance.update(
+    await instance.add([
         {
-            id__local__: '4e280548-9738-4c67-a1bc-6dfe2143e713',
+            id: 123123,
+            content: '456',
         },
         {
-            idU: '12312',
+            id: 123123,
+            content: '4561',
         },
-    );
+    ]);
+    // await instance.add({
+    //     id: 123123,
+    //     content: '4561',
+    // });
+    // await instance.update(
+    //     [
+    //         {
+    //             id__local__: '3a80fe09-a45b-402b-9983-7104f502d24e',
+    //         },
+    //         {
+    //             id__local__: 'e86002b1-4b2e-496e-af73-ea66f1b6103d',
+    //         },
+    //     ],
+    //     [
+    //         {
+    //             idU: '12312',
+    //         },
+    //         {
+    //             idU: 'qweqweqwe',
+    //         },
+    //     ],
+    // );
     // await instance.setupCache();
     // await instance.getCacheData();
     // await instance.delete(target);

@@ -7,10 +7,11 @@ export type Option = {
     cache?: boolean;
     idKey?: string;
     afterSetCache?: (cache?: any) => void;
+    afterDataChange?: (cache?: any) => void;
 };
 /**
  * 简单的json数据库，数据必须以数组存在，适用于小量数据
- * 实时操作，每次读取全量数据
+ * 实时操作，每次读取全量数据，对读写顺序严格控制
  */
 export class RealJsonData {
     jsonPath = '';
@@ -20,6 +21,7 @@ export class RealJsonData {
     queueInstance: SerialQueue;
     #cacheData: any = [];
     #afterSetCache?: (cache?: any) => void;
+    #afterDataChange?: (data?: any) => void;
     constructor(jsonPath: string, keyConfig: any, option?: Option) {
         this.cache = !!option?.cache;
         if (option?.idKey) {
@@ -27,6 +29,9 @@ export class RealJsonData {
         }
         if (option?.afterSetCache) {
             this.#afterSetCache = option.afterSetCache;
+        }
+        if (option?.afterDataChange) {
+            this.#afterDataChange = option.afterDataChange;
         }
         this.queueInstance = new SerialQueue();
         this.jsonPath = jsonPath;
@@ -57,6 +62,7 @@ export class RealJsonData {
         if (this.cache) {
             this.#cacheData = JSON.parse(content);
         }
+        this.#afterDataChange?.(JSON.parse(content));
         return;
     }
     /** 预热缓存 */
@@ -64,13 +70,13 @@ export class RealJsonData {
         if (!this.cache) {
             throw 'No cache configured';
         }
-        const data = await this.queueInstance.push(async () => {
+        const taskRes = await this.queueInstance.push(async () => {
             return await this.#read();
         });
         if (this.cache) {
             this.#afterSetCache?.(this.#cacheData);
         }
-        return data;
+        return taskRes;
     }
     /** 获取缓存数据，方便查找 */
     getCacheData() {
@@ -81,7 +87,7 @@ export class RealJsonData {
     }
     /** 格式化数据 */
     async format() {
-        const data = await this.queueInstance.push(async () => {
+        const taskRes = await this.queueInstance.push(async () => {
             const list = await this.#read();
             await this.#write(list);
             return list;
@@ -89,21 +95,21 @@ export class RealJsonData {
         if (this.cache) {
             this.#afterSetCache?.(this.#cacheData);
         }
-        return data;
+        return taskRes;
     }
     /** 返回所有数据列表 */
     async list() {
-        const data = await this.queueInstance.push(async () => {
+        const taskRes = await this.queueInstance.push(async () => {
             return await this.#read();
         });
         if (this.cache) {
             this.#afterSetCache?.(this.#cacheData);
         }
-        return data;
+        return taskRes;
     }
     /** 删除第一个 */
     async shift() {
-        const data = await this.queueInstance.push(async () => {
+        const taskRes = await this.queueInstance.push(async () => {
             const list = await this.#read();
             const target = list.shift();
             await this.#write(list);
@@ -112,11 +118,11 @@ export class RealJsonData {
         if (this.cache) {
             this.#afterSetCache?.(this.#cacheData);
         }
-        return data;
+        return taskRes;
     }
     /** 删除最后一个 */
     async pop() {
-        const data = await this.queueInstance.push(async () => {
+        const taskRes = await this.queueInstance.push(async () => {
             const list = await this.#read();
             const target = list.pop();
             await this.#write(list);
@@ -125,11 +131,11 @@ export class RealJsonData {
         if (this.cache) {
             this.#afterSetCache?.(this.#cacheData);
         }
-        return data;
+        return taskRes;
     }
     /** 直接写入新的list，风险较高 */
     async setList(list: any) {
-        const data = await this.queueInstance.push(async () => {
+        const taskRes = await this.queueInstance.push(async () => {
             await this.#read(); // 读取检测
             list = list.map((item: any) => {
                 return completionData(item, this.keyConfig);
@@ -140,51 +146,76 @@ export class RealJsonData {
         if (this.cache) {
             this.#afterSetCache?.(this.#cacheData);
         }
-        return data;
+        return taskRes;
     }
-    /** 添加一个数据 */
+    /** 添加一个数据，可批量添加 */
     async add(data: any) {
-        const data_ = await this.queueInstance.push(async () => {
-            const list = await this.#read();
-            if (list.find((item: any) => item[this.idKey] === data[this.idKey])) {
-                throw 'ERROR: Repeating Instances';
-            }
-            data = completionData(data, this.keyConfig);
-            list.push(data);
+        const taskRes = await this.queueInstance.push(async () => {
+            const isArray = Array.isArray(data);
+            const dataList = isArray ? data : [data];
+            const list: any = await this.#read();
+            const idKeyMap = list.reduce((c: any, i: any) => {
+                c[i[this.idKey]] = true;
+                return c;
+            }, {});
+            const newList: any = [];
+            dataList.forEach((item: any) => {
+                if (idKeyMap[item[this.idKey]]) {
+                    return;
+                }
+                item = completionData(item, this.keyConfig);
+                newList.push(item);
+            });
+            list.push(...newList);
             await this.#write(list);
-            return data;
+            return isArray ? newList : newList[0];
         });
         if (this.cache) {
             this.#afterSetCache?.(this.#cacheData);
         }
-        return data_;
+        return taskRes;
     }
     /** 更新一个数据 */
     async update(instance: any, data: any) {
-        const data_ = await this.queueInstance.push(async () => {
+        const taskRes = await this.queueInstance.push(async () => {
+            const isArray = Array.isArray(instance);
+            const instanceList = isArray ? instance : [instance];
+            const dataList = isArray ? data : [data];
             const list = await this.#read();
-            const target = list.find((item: any) => item[this.idKey] == instance[this.idKey]);
-            if (!target) {
-                throw 'ERROR: No corresponding instance found';
-            }
-            Object.keys(target).forEach((key) => {
-                if (key === this.idKey) return;
-                if (!this.keyConfig.hasOwnProperty(key)) return;
-                if (data.hasOwnProperty(key) && data[key] !== undefined) {
-                    target[key] = data[key];
+            const idKeyMap = list.reduce((c: any, i: any) => {
+                c[i[this.idKey]] = i;
+                return c;
+            }, {});
+            const updateList: any = [];
+            instanceList.forEach((item: any, index: number) => {
+                const target = idKeyMap[item[this.idKey]];
+                if (!target) {
+                    return;
                 }
+                const data__ = dataList[index];
+                if (!data__) {
+                    return;
+                }
+                Object.keys(target).forEach((key) => {
+                    if (key === this.idKey) return;
+                    if (!this.keyConfig.hasOwnProperty(key)) return;
+                    if (data__.hasOwnProperty(key) && data__[key] !== undefined) {
+                        target[key] = data__[key];
+                    }
+                });
+                updateList.push(target);
             });
             await this.#write(list);
-            return target;
+            return isArray ? updateList : updateList[0];
         });
         if (this.cache) {
             this.#afterSetCache?.(this.#cacheData);
         }
-        return data_;
+        return taskRes;
     }
     /** 删除个体，参数是实例 || [实例] */
     async delete(instance: any) {
-        const data = await this.queueInstance.push(async () => {
+        const taskRes = await this.queueInstance.push(async () => {
             const list = await this.#read();
             if (!Array.isArray(instance)) {
                 instance = [instance];
@@ -202,6 +233,6 @@ export class RealJsonData {
         if (this.cache) {
             this.#afterSetCache?.(this.#cacheData);
         }
-        return data;
+        return taskRes;
     }
 }

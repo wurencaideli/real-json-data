@@ -3,10 +3,11 @@ export type Option = {
     cache?: boolean;
     idKey?: string;
     afterSetCache?: (cache?: any) => void;
+    afterDataChange?: (cache?: any) => void;
 };
 /**
  * 简单的json数据库，数据必须以数组存在，适用于小量数据
- * 实时操作，每次读取全量数据
+ * 实时操作，每次读取全量数据，对读写顺序严格控制
  */
 export declare class RealJsonData {
     #private;
@@ -30,7 +31,7 @@ export declare class RealJsonData {
     pop(): Promise<unknown>;
     /** 直接写入新的list，风险较高 */
     setList(list: any): Promise<unknown>;
-    /** 添加一个数据 */
+    /** 添加一个数据，可批量添加 */
     add(data: any): Promise<unknown>;
     /** 更新一个数据 */
     update(instance: any, data: any): Promise<unknown>;

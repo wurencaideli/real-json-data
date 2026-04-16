@@ -27,7 +27,10 @@ const instance = new RealJsonData(
         cache: true,
         idKey: 'id__local__',
         afterSetCache(list) {
-            console.log('cache', list);
+            console.log('afterSetCache', list);
+        },
+        afterDataChange(list) {
+            console.log('afterDataChange', list);
         },
     },
 );
