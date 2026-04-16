@@ -1,7 +1,8 @@
 import { SerialQueue } from './common.js';
-type Option = {
+export type Option = {
     cache?: boolean;
     idKey?: string;
+    afterSetCache?: (cache?: any) => {};
 };
 /**
  * 简单的json数据库，数据必须以数组存在，适用于小量数据
@@ -36,4 +37,3 @@ export declare class RealJsonData {
     /** 删除个体，参数是实例 || [实例] */
     delete(instance: any): Promise<unknown>;
 }
-export {};

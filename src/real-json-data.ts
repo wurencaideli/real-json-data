@@ -3,9 +3,10 @@ import { promises as fs } from 'fs';
 
 import { completionData, SerialQueue } from './common.js';
 
-type Option = {
+export type Option = {
     cache?: boolean;
     idKey?: string;
+    afterSetCache?: (cache?: any) => {};
 };
 /**
  * 简单的json数据库，数据必须以数组存在，适用于小量数据
@@ -18,10 +19,14 @@ export class RealJsonData {
     idKey: string = 'id__local__';
     queueInstance: SerialQueue;
     #cacheData: any = [];
+    #afterSetCache?: (cache?: any) => {};
     constructor(jsonPath: string, keyConfig: any, option: Option = {}) {
         this.cache = !!option.cache;
         if (option.idKey) {
             this.idKey = option.idKey;
+        }
+        if (option.afterSetCache) {
+            this.#afterSetCache = option.afterSetCache;
         }
         this.queueInstance = new SerialQueue();
         this.jsonPath = jsonPath;
@@ -59,9 +64,13 @@ export class RealJsonData {
         if (!this.cache) {
             throw 'No cache configured';
         }
-        return await this.queueInstance.push(async () => {
+        const data = await this.queueInstance.push(async () => {
             return await this.#read();
         });
+        if (this.cache) {
+            this.#afterSetCache?.(this.#cacheData);
+        }
+        return data;
     }
     /** 获取缓存数据，方便查找 */
     getCacheData() {
@@ -72,39 +81,55 @@ export class RealJsonData {
     }
     /** 格式化数据 */
     async format() {
-        return await this.queueInstance.push(async () => {
+        const data = await this.queueInstance.push(async () => {
             const list = await this.#read();
             await this.#write(list);
             return list;
         });
+        if (this.cache) {
+            this.#afterSetCache?.(this.#cacheData);
+        }
+        return data;
     }
     /** 返回所有数据列表 */
     async list() {
-        return await this.queueInstance.push(async () => {
+        const data = await this.queueInstance.push(async () => {
             return await this.#read();
         });
+        if (this.cache) {
+            this.#afterSetCache?.(this.#cacheData);
+        }
+        return data;
     }
     /** 删除第一个 */
     async shift() {
-        return await this.queueInstance.push(async () => {
+        const data = await this.queueInstance.push(async () => {
             const list = await this.#read();
             const target = list.shift();
             await this.#write(list);
             return target;
         });
+        if (this.cache) {
+            this.#afterSetCache?.(this.#cacheData);
+        }
+        return data;
     }
     /** 删除最后一个 */
     async pop() {
-        return await this.queueInstance.push(async () => {
+        const data = await this.queueInstance.push(async () => {
             const list = await this.#read();
             const target = list.pop();
             await this.#write(list);
             return target;
         });
+        if (this.cache) {
+            this.#afterSetCache?.(this.#cacheData);
+        }
+        return data;
     }
     /** 直接写入新的list，风险较高 */
     async setList(list: any) {
-        return await this.queueInstance.push(async () => {
+        const data = await this.queueInstance.push(async () => {
             await this.#read(); // 读取检测
             list = list.map((item: any) => {
                 return completionData(item, this.keyConfig);
@@ -112,10 +137,14 @@ export class RealJsonData {
             await this.#write(list);
             return list;
         });
+        if (this.cache) {
+            this.#afterSetCache?.(this.#cacheData);
+        }
+        return data;
     }
     /** 添加一个数据 */
     async add(data: any) {
-        return await this.queueInstance.push(async () => {
+        const data_ = await this.queueInstance.push(async () => {
             const list = await this.#read();
             if (list.find((item: any) => item[this.idKey] === data[this.idKey])) {
                 throw 'ERROR: Repeating Instances';
@@ -125,10 +154,14 @@ export class RealJsonData {
             await this.#write(list);
             return data;
         });
+        if (this.cache) {
+            this.#afterSetCache?.(this.#cacheData);
+        }
+        return data_;
     }
     /** 更新一个数据 */
     async update(instance: any, data: any) {
-        return await this.queueInstance.push(async () => {
+        const data_ = await this.queueInstance.push(async () => {
             const list = await this.#read();
             const target = list.find((item: any) => item[this.idKey] == instance[this.idKey]);
             if (!target) {
@@ -144,10 +177,14 @@ export class RealJsonData {
             await this.#write(list);
             return target;
         });
+        if (this.cache) {
+            this.#afterSetCache?.(this.#cacheData);
+        }
+        return data_;
     }
     /** 删除个体，参数是实例 || [实例] */
     async delete(instance: any) {
-        return await this.queueInstance.push(async () => {
+        const data = await this.queueInstance.push(async () => {
             const list = await this.#read();
             if (!Array.isArray(instance)) {
                 instance = [instance];
@@ -162,5 +199,9 @@ export class RealJsonData {
             await this.#write(newList);
             return newList;
         });
+        if (this.cache) {
+            this.#afterSetCache?.(this.#cacheData);
+        }
+        return data;
     }
 }

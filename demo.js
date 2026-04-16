@@ -1,13 +1,23 @@
 import { RealJsonData } from './dist/real-json-data.esm.js';
 
-const instance = new RealJsonData('./demo-data.json', {
-    idU: {
-        default: '',
+const instance = new RealJsonData(
+    './demo-data.json',
+    {
+        idU: {
+            default: '',
+        },
+        content: {
+            default: '',
+        },
     },
-    content: {
-        default: '',
+    {
+        cache: true,
+        idKey: 'id__local__',
+        afterSetCache(list) {
+            console.log('cache', list);
+        },
     },
-});
+);
 async function start() {
     console.log(instance);
     console.log(await instance.list());
@@ -28,6 +38,10 @@ async function start() {
         },
     );
     // await instance.delete(target);
+    // await instance.format();
+    // await instance.shift();
+    // await instance.pop();
+    // await instance.setList([]);
     console.log(await instance.list());
 }
 start();
