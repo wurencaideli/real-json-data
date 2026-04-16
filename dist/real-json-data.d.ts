@@ -2,7 +2,7 @@ import { SerialQueue } from './common.js';
 export type Option = {
     cache?: boolean;
     idKey?: string;
-    afterSetCache?: (cache?: any) => {};
+    afterSetCache?: (cache?: any) => void;
 };
 /**
  * 简单的json数据库，数据必须以数组存在，适用于小量数据

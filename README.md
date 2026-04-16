@@ -50,6 +50,8 @@ async function start() {
             idU: '12312',
         },
     );
+    // await instance.setupCache();
+    // await instance.getCacheData();
     // await instance.delete(target);
     // await instance.format();
     // await instance.shift();

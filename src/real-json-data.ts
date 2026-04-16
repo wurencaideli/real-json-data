@@ -6,7 +6,7 @@ import { completionData, SerialQueue } from './common.js';
 export type Option = {
     cache?: boolean;
     idKey?: string;
-    afterSetCache?: (cache?: any) => {};
+    afterSetCache?: (cache?: any) => void;
 };
 /**
  * 简单的json数据库，数据必须以数组存在，适用于小量数据
@@ -19,13 +19,13 @@ export class RealJsonData {
     idKey: string = 'id__local__';
     queueInstance: SerialQueue;
     #cacheData: any = [];
-    #afterSetCache?: (cache?: any) => {};
-    constructor(jsonPath: string, keyConfig: any, option: Option = {}) {
-        this.cache = !!option.cache;
-        if (option.idKey) {
+    #afterSetCache?: (cache?: any) => void;
+    constructor(jsonPath: string, keyConfig: any, option?: Option) {
+        this.cache = !!option?.cache;
+        if (option?.idKey) {
             this.idKey = option.idKey;
         }
-        if (option.afterSetCache) {
+        if (option?.afterSetCache) {
             this.#afterSetCache = option.afterSetCache;
         }
         this.queueInstance = new SerialQueue();
