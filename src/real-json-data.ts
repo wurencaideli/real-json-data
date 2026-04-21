@@ -43,14 +43,29 @@ export class RealJsonData {
         };
     }
     async #read() {
-        const listContent = await fs.readFile(this.jsonPath, 'utf8');
-        let list: any = JSON.parse(listContent);
-        if (!Array.isArray(list)) {
-            throw 'data is not an array json string.';
+        let list: any = [];
+        const fileExists = await fs
+            .access(this.jsonPath)
+            .then(() => true)
+            .catch(() => false);
+        if (!fileExists) {
+            await fs.writeFile(this.jsonPath, '[]', 'utf8');
+            list = [];
+        } else {
+            const listContent = await fs.readFile(this.jsonPath, 'utf8').then((c) => c.trim());
+            if (listContent === '') {
+                await fs.writeFile(this.jsonPath, '[]', 'utf8');
+                list = [];
+            } else {
+                list = JSON.parse(listContent);
+                if (!Array.isArray(list)) {
+                    throw 'ERROR: Data is not an array json string.';
+                }
+                list = list.map((item) => {
+                    return completionData(item, this.keyConfig);
+                });
+            }
         }
-        list = list.map((item) => {
-            return completionData(item, this.keyConfig);
-        });
         if (this.cache) {
             this.#cacheData = list;
         }
@@ -68,7 +83,7 @@ export class RealJsonData {
     /** 预热缓存 */
     async setupCache() {
         if (!this.cache) {
-            throw 'No cache configured';
+            throw 'ERROR: No cache configured';
         }
         const taskRes = await this.queueInstance.push(async () => {
             return await this.#read();
@@ -81,7 +96,7 @@ export class RealJsonData {
     /** 获取缓存数据，方便查找 */
     getCacheData() {
         if (!this.cache) {
-            throw 'No cache configured';
+            throw 'ERROR: No cache configured';
         }
         return this.#cacheData;
     }
